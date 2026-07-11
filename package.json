@@ -27,6 +27,7 @@
   "bugs": {
     "url": "https://github.com/CoCreate-app/CoCreate-authenticate/issues"
   },
+  "type": "module",
   "main": "./src/index.js",
   "homepage": "https://cocreate.app/docs/authenticate",
   "dependencies": {
