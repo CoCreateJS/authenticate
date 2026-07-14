@@ -1,3 +1,17 @@
+# [1.11.0](https://github.com/CoCreate-app/CoCreate-authenticate/compare/v1.10.2...v1.11.0) (2026-07-14)
+
+
+### Bug Fixes
+
+* removed post install ([5fd376c](https://github.com/CoCreate-app/CoCreate-authenticate/commit/5fd376cdfe83f0902c3e34c962ac7b45713a6bea))
+* semantic version handling. Reorganize .gitignore for improved clarity and structure ([142646c](https://github.com/CoCreate-app/CoCreate-authenticate/commit/142646cf3d25491af4113c98f51361a71be72193))
+* update module export to ES6 syntax in release.config.js ([ed8bcac](https://github.com/CoCreate-app/CoCreate-authenticate/commit/ed8bcac530a19268a9259babcf4cd975c301b1cd))
+
+
+### Features
+
+* add ESM support and improve key pair management functions ([2418adb](https://github.com/CoCreate-app/CoCreate-authenticate/commit/2418adba54911236be478783b3b965e4cfcf9e98))
+
 ## [1.10.2](https://github.com/CoCreate-app/CoCreate-authenticate/compare/v1.10.1...v1.10.2) (2025-05-01)
 
 
