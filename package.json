@@ -1,6 +1,6 @@
 {
   "name": "@cocreate/authenticate",
-  "version": "1.12.0",
+  "version": "1.12.1",
   "description": "A simple authenticate component in vanilla javascript. Easily configured using HTML5 data-attributes and/or JavaScript API.",
   "keywords": [
     "authenticate",

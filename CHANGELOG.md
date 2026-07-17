@@ -1,3 +1,10 @@
+## [1.12.1](https://github.com/CoCreate-app/CoCreate-authenticate/compare/v1.12.0...v1.12.1) (2026-07-17)
+
+
+### Bug Fixes
+
+* bump dependencies ([45aac1d](https://github.com/CoCreate-app/CoCreate-authenticate/commit/45aac1d37a9afb021ff4fb2556d41fa608769f1b))
+
 # [1.12.0](https://github.com/CoCreate-app/CoCreate-authenticate/compare/v1.11.0...v1.12.0) (2026-07-17)
 
 
