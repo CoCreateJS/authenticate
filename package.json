@@ -1,6 +1,6 @@
 {
   "name": "@cocreate/authenticate",
-  "version": "1.10.2",
+  "version": "1.12.0",
   "description": "A simple authenticate component in vanilla javascript. Easily configured using HTML5 data-attributes and/or JavaScript API.",
   "keywords": [
     "authenticate",
@@ -14,7 +14,8 @@
   ],
   "scripts": {
     "start": "npx webpack --config webpack.config.js --watch",
-    "build": "NODE_ENV=production npx webpack --config webpack.config.js"  },
+    "build": "NODE_ENV=production npx webpack --config webpack.config.js"
+  },
   "publishConfig": {
     "access": "public"
   },
