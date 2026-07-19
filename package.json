@@ -1,16 +1,22 @@
 {
   "name": "@cocreate/authenticate",
   "version": "1.12.2",
-  "description": "A simple authenticate component in vanilla javascript. Easily configured using HTML5 data-attributes and/or JavaScript API.",
+  "description": "A high-performance, zero-dependency ESM session management and authentication engine using native RS256 asymmetric cryptography, ephemeral 2048-bit RSA keypair rotation, and reactive database state synchronization.",
   "keywords": [
-    "authenticate",
-    "low-code",
-    "realtime",
-    "realtime-framework",
-    "collaboration",
-    "shared-editing",
-    "html5-framework",
-    "javascript-framework"
+    "cocreate",
+    "cocreate-app",
+    "authentication",
+    "auth",
+    "jwt",
+    "rs256",
+    "crypto",
+    "session-management",
+    "rsa-2048",
+    "multi-tenant",
+    "token-verification",
+    "zero-dependency",
+    "esm",
+    "security"
   ],
   "scripts": {
     "start": "webpack --config webpack.config.js --watch",
@@ -30,8 +36,5 @@
   },
   "type": "module",
   "main": "./src/index.js",
-  "homepage": "https://cocreate.app/docs/authenticate",
-  "dependencies": {
-    "jsonwebtoken": "^9.0.0"
-  }
+  "homepage": "https://cocreate.app/docs/authenticate"
 }

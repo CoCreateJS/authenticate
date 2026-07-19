@@ -1,83 +1,135 @@
-# CoCreate-authenticate
+# @cocreate/authentication
 
-A convenient chain handler allows user to chain multiple CoCreate components together. When one authenticate is complete next one will start. The sequence goes untill all authenticates completed. Grounded on Vanilla javascript, easily configured using HTML5 data-attributes and/or JavaScript API. Take it for a spin in our [playground!](https://cocreate.app/docs/authenticate)
+A high-performance, native RS256 JWT session management and authentication engine. Designed as a zero-dependency ESM singleton cache layer, this engine dynamically provisions 2048-bit RSA keypairs, signs non-opaque session tokens, syncs live connection statuses back to databases via CoCreate CRUD gateways, and runs fast local public-key signature verification to guard distributed nodes against forged requests.
 
-![GitHub latest release](https://img.shields.io/github/v/release/CoCreate-app/CoCreate-authenticate?style=flat-square)
-![GitHub contributors](https://img.shields.io/github/contributors/CoCreate-app/CoCreate-authenticate?style=flat-square)
-![License](https://img.shields.io/static/v1?style=flat-square&label=license&message=SSPL&color=green)
-![Hiring](https://img.shields.io/static/v1?style=flat-square&label=&message=Hiring&color=blueviolet)
+---
 
-![CoCreate-authenticate](https://cdn.cocreate.app/docs/CoCreate-authenticate.gif)
+## Table of Contents
 
-## [Docs & Demo](https://cocreate.app/docs/authenticate)
+* [Features](#features)
+* [Installation](#installation)
+* [Usage](#usage)
+* [How it Works](#how-it-works)
+* [API Reference](#api-reference)
+* [How to Contribute](#how-to-contribute)
+* [License](#license)
 
-For a complete guide and working demo refer to the [doumentation](https://cocreate.app/docs/authenticate)
+---
 
-## CDN
+## Features
 
-```html
-<script src="https://cdn.cocreate.app/authenticate/latest/CoCreate-authenticate.min.js"></script>
+* **Zero-Dependency Native RS256:** Leverages Node's internal `node:crypto` subsystem to sign and verify JSON Web Tokens (JWT) using asymmetric cryptography without relying on massive external dependencies.
+* **Ephemeral Key-Pair Lifecycles:** Automatically provisions 2048-bit RSA key pairs, assigns isolated tracker IDs (`kid`), and handles local cache purging when lifetimes expire.
+* **Multi-Layered Hot Cache:** Accelerates performance by keeping active key pairs and client connections within rapid-access memory structures (`Map`), dropping signature evaluation latency to a minimum.
+* **CRUD Gateway Synchronization:** Seamlessly broadcasts active user sessions and lifecycle states down to persistent target database collections via internal protocol events (`object.update`).
+* **Fast Signature Guard:** Isolates signature validations from state persistence layers, checking incoming signatures against active in-memory keys to drop structural forgery attempts instantly before making database round trips.
+
+---
+
+## Installation
+
+```bash
+npm install @cocreate/authentication
+
 ```
 
-```html
-<script src="https://cdn.cocreate.app/authenticate/latest/CoCreate-authenticate.min.css"></script>
+---
+
+## Usage
+
+### Token Issuance (Session Generation)
+
+Generate a cryptographically signed RS256 token for a successful client connection and synchronize the state into database layers:
+
+```javascript
+import auth from '@cocreate/authentication';
+
+const sessionParams = {
+  organization_id: "64b9a32e18f21bc56789abcd",
+  user_id: "64b9a35f18f21bc5e9812456",
+  clientId: "client_ws_90210_alpha",
+  host: "app.cocreate.js"
+};
+
+// Creates/reuses keys, signs the JWT, and saves the session
+const token = auth.encodeToken(
+  sessionParams.organization_id,
+  sessionParams.user_id,
+  sessionParams.clientId,
+  sessionParams.host
+);
+
+console.log("Generated JWT:", token);
+
 ```
 
-## NPM
+### Token Verification & Decoding
 
-```shell
-$ npm i @cocreate/authenticate
+Intercept incoming request channels, extract identity records, and catch forged signatures locally:
+
+```javascript
+import auth from '@cocreate/authentication';
+
+const inboundToken = "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6...";
+const context = {
+  organization_id: "64b9a32e18f21bc56789abcd",
+  clientId: "client_ws_90210_alpha",
+  host: "app.cocreate.js"
+};
+
+// Verifies integrity against local keys and falls back to structural DB records if required
+const session = await auth.decodeToken(
+  inboundToken,
+  context.organization_id,
+  context.clientId,
+  context.host
+);
+
+if (!session.user_id) {
+  console.log("Authentication Failed: Session missing, expired, or signature forged.");
+} else {
+  console.log(`Authenticated User: ${session.user_id}, Expires at: ${session.expires}`);
+}
+
 ```
 
-# Table of Contents
+---
 
--   [Table of Contents](#table-of-contents)
--   [Announcements](#announcements)
--   [Roadmap](#roadmap)
--   [How to Contribute](#how-to-contribute)
--   [About](#about)
--   [License](#license)
+## How it Works
 
-<a name="announcements"></a>
+1. **Lifecycle Rotation & Key Selection:** When `encodeToken` runs, the engine checks its active in-memory cache map. It automatically prunes expired keys and searches for a valid, unexpired asymmetric pair. If none are found, it triggers a 2048-bit RSA generation run.
+2. **Asymmetric Envelope Signing:** It constructs standard JSON Web Token blocks (Header with `kid` + Payload with `user_id` and timestamps), serializes them into Base64URL string footprints, and signs the unified buffer natively via an asymmetric SHA-256 algorithm.
+3. **Persisted State Bridging:** Once the token is assembled, the engine logs the structure into local memory slots and issues asynchronous events (`object.update`) down to central arrays to keep database records aligned with client connection parameters.
+4. **Signature Pre-Screening:** During decoding checks (`decodeToken`), the engine parses the incoming header instantly to read the key identification string (`kid`). If that key is cached locally, it executes an direct crypto check (`verifySignature`). Forged payloads are intercepted and dropped right here, skipping down-stream infrastructure operations.
+5. **State Invalidation & Synchronization:** If local signatures check out but matching memory records are absent (e.g., when scaled out across distributed processes), it sends query lookups down to persistent storage (`read`). If the token is verified to be expired or invalid, the engine clears all local tracking points and flags the database to nullify the state.
 
-# Announcements
+---
 
-All updates to this library are documented in our [CHANGELOG](https://github.com/CoCreate-app/CoCreate-authenticate/blob/master/CHANGELOG.md) and [releases](https://github.com/CoCreate-app/CoCreate-authenticate/releases). You may also subscribe to email for releases and breaking changes.
+## API Reference
 
-<a name="roadmap"></a>
+### Default Manifest Exports
 
-# Roadmap
+| Method Selector | Payload Input Structure | Returns | Role |
+| --- | --- | --- | --- |
+| **`createKeyPair()`** | *None* | `Object` | Generates a new secure 2048-bit RSA key pair object with automatic expiration tracking. |
+| **`deleteKeyPair(keyPair)`** | `keyPair: Object` | `Boolean` | Explicitly removes targeted cryptographic configurations from the local tracking cache. |
+| **`encodeToken(orgId, userId, clientId, host)`** | `String, String, String, String` | `String` | Generates a zero-dependency RS256 token, assigns local session parameters, and pushes changes to databases. |
+| **`decodeToken(token, orgId, clientId, host)`** | `String, String, String, String` | `Object` | Decodes signatures, catches structural forgery attempts instantly, and returns verified identity states. |
+| **`read(orgId, clientId, host)`** | `String, String, String` | `Promise<Object|null>` | Reaches out into data backends via internal CRUD pathways to retrieve active persistent session payloads. |
 
-If you are interested in the future direction of this project, please take a look at our open [issues](https://github.com/CoCreate-app/CoCreate-authenticate/issues) and [pull requests](https://github.com/CoCreate-app/CoCreate-authenticate/pulls). We would love to hear your feedback.
+---
 
-<a name="about"></a>
+## How to Contribute
 
-# About
+We encourage contribution to our libraries (you might even score some nifty swag), please see our [CONTRIBUTING.md](https://github.com/CoCreate-app/CoCreate-authentication/blob/master/CONTRIBUTING.md) guide for details. If you encounter any bugs or wish to make feature requests, please submit an issue on our [GitHub Issues](https://github.com/CoCreate-app/CoCreate-authentication/issues) tracker. We want this library to be community-driven, and CoCreate led. We need your help to realize this goal.
 
-CoCreate-authenticate is guided and supported by the CoCreate Developer Experience Team.
+For broader system configurations and API guides, please visit our [CoCreate Authentication Documentation](https://cocreatejs.com/docs/authentication).
 
-Please Email the Developer Experience Team [here](mailto:develop@cocreate.app) in case of any queries.
+---
 
-CoCreate-authenticate is maintained and funded by CoCreate. The names and logos for CoCreate are trademarks of CoCreate, LLC.
-
-<a name="contribute"></a>
-
-# How to Contribute
-
-We encourage contribution to our libraries (you might even score some nifty swag), please see our [CONTRIBUTING](https://github.com/CoCreate-app/CoCreate-authenticate/blob/master/CONTRIBUTING.md) guide for details.
-
-We want this library to be community-driven, and CoCreate led. We need your help to realize this goal. To help make sure we are building the right things in the right order, we ask that you create [issues](https://github.com/CoCreate-app/CoCreate-authenticate/issues) and [pull requests](https://github.com/CoCreate-app/CoCreate-authenticate/pulls) or merely upvote or comment on existing issues or pull requests.
-
-We appreciate your continued support, thank you!
-
-<a name="license"></a>
-
-# License
+## License
 
 This software is dual-licensed under the GNU Affero General Public License version 3 (AGPLv3) and a commercial license.
 
--   **Open Source Use**: For open-source projects and non-commercial use, this software is available under the AGPLv3. The AGPLv3 allows you to freely use, modify, and distribute this software, provided that all modifications and derivative works are also licensed under the AGPLv3. For the full license text, see the [LICENSE file](https://github.com/CoCreate-app/CoCreate-authenticate/blob/master/LICENSE).
-
--   **Commercial Use**: For-profit companies and individuals intending to use this software for commercial purposes must obtain a commercial license. The commercial license is available when you sign up for an API key on our [website](https://cocreate.app). This license permits proprietary use and modification of the software without the copyleft requirements of the AGPLv3. It is ideal for integrating this software into proprietary commercial products and applications.
-
-If you have not purchased a commercial license and intend to use this software for commercial purposes, you are required to sign up for an API key on our website.
+* **Open Source Use:** For open-source projects and non-commercial use, this software is available under the AGPLv3. For the full license text, see the LICENSE file.
+* **Commercial Use:** For-profit companies and individuals intending to use this software for commercial purposes must obtain a commercial license. The commercial license is available when you sign up for an API key on our website.
