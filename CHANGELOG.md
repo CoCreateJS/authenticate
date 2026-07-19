@@ -1,3 +1,10 @@
+## [1.12.2](https://github.com/CoCreate-app/CoCreate-authenticate/compare/v1.12.1...v1.12.2) (2026-07-19)
+
+
+### Bug Fixes
+
+* set default branch to main ([4fcc1e9](https://github.com/CoCreate-app/CoCreate-authenticate/commit/4fcc1e9ebaf17e97641d6c44ea7c99dec96e3c63))
+
 ## [1.12.1](https://github.com/CoCreate-app/CoCreate-authenticate/compare/v1.12.0...v1.12.1) (2026-07-17)
 
 
