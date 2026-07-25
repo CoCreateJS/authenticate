@@ -23,9 +23,6 @@
 import crypto from 'node:crypto';
 import crud from '@cocreate/crud-server';
 
-// ==========================================
-// Module-Level Sandbox State (ESM Singleton Container)
-// ==========================================
 const tokenExpiration = 60; // Token expiration in minutes
 const keyPairs = new Map();  // Active public/private cryptographic key pairs
 const sessions = new Map();  // In-memory hot session storage cache
