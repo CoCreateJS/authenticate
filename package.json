@@ -36,5 +36,8 @@
   },
   "type": "module",
   "main": "./src/index.js",
-  "homepage": "https://cocreate.app/docs/authenticate"
+  "homepage": "https://cocreate.app/docs/authenticate",
+  "dependencies": {
+    "@cocreate/crud-server": "^1.40.0"
+  }
 }
