@@ -38,6 +38,7 @@
   "main": "./src/index.js",
   "homepage": "https://cocreate.app/docs/authenticate",
   "dependencies": {
-    "@cocreate/crud-server": "^1.41.0"
+    "@cocreate/crud-server": "^1.41.0",
+    "@cocreate/utils": "^1.52.0"
   }
 }

@@ -1,5 +1,5 @@
 /********************************************************************************
- * Copyright (C) 2023 CoCreate and Contributors.
+ * Copyright (C) 2023-2026 CoCreate and Contributors.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published
@@ -20,8 +20,8 @@
 // you must obtain a commercial license from CoCreate LLC.
 // For details, visit <https://cocreate.app/licenses/> or contact us at sales@cocreate.app.
 
-import crypto from 'node:crypto';
 import crud from '@cocreate/crud-server';
+import { security } from '@cocreate/utils';
 
 const tokenExpiration = 60; // Token expiration in minutes
 const keyPairs = new Map();  // Active public/private cryptographic key pairs
@@ -32,22 +32,14 @@ const sessions = new Map();  // In-memory hot session storage cache
  * @returns {Object} Newly created key pair configuration
  */
 function createKeyPair() {
-    // Generate secure 2048-bit RSA keys natively using Node's built-in Crypto module
-    const { privateKey, publicKey } = crypto.generateKeyPairSync('rsa', {
-        modulusLength: 2048,
-        publicKeyEncoding: {
-            type: 'spki',
-            format: 'pem'
-        },
-        privateKeyEncoding: {
-            type: 'pkcs8',
-            format: 'pem'
-        }
+    // Utilize security.generateKeyPair utility with RSA configuration
+    const { publicKey, privateKey } = security.generateKeyPair('rsa', {
+        modulusLength: 2048
     });
 
     const created = Date.now();
     const keyPair = {
-        _id: crypto.randomUUID(),
+        _id: security.generateApiKey({ prefix: '', byteLength: 16, encoding: 'hex' }).secret,
         privateKey,
         publicKey,
         created,
@@ -70,24 +62,6 @@ function deleteKeyPair(keyPair) {
 }
 
 /**
- * Helper to encode JSON payloads safely as Base64URL string representations
- */
-function base64urlEncode(obj) {
-    return Buffer.from(JSON.stringify(obj)).toString('base64url');
-}
-
-/**
- * Helper to decode Base64URL strings safely back to JSON objects
- */
-function base64urlDecode(str) {
-    try {
-        return JSON.parse(Buffer.from(str, 'base64url').toString('utf8'));
-    } catch {
-        return null;
-    }
-}
-
-/**
  * Strips 'Bearer ' prefixes, whitespace, or outer quotes from incoming tokens.
  */
 function sanitizeToken(token) {
@@ -104,7 +78,7 @@ function sanitizeToken(token) {
 
 /**
  * Creates and signs a new token utilizing the latest available RSA key pair.
- * Generates a zero-dependency RS256 JWT natively.
+ * Generates an RS256 JWT using security.generateJWT.
  */
 function encodeToken(organization_id, user_id, clientId, host) {
     let keyPair = null;
@@ -126,7 +100,7 @@ function encodeToken(organization_id, user_id, clientId, host) {
     const iat = Math.floor(currentTime / 1000);
     const exp = iat + (tokenExpiration * 60);
 
-    // Standard JWT Segments (Header containing Key ID + Alg, and standard Payload)
+    // Standard JWT Segments
     const header = {
         alg: 'RS256',
         typ: 'JWT',
@@ -141,16 +115,8 @@ function encodeToken(organization_id, user_id, clientId, host) {
         exp
     };
 
-    const encodedHeader = base64urlEncode(header);
-    const encodedPayload = base64urlEncode(payload);
-    const signatureInput = `${encodedHeader}.${encodedPayload}`;
-
-    // Cryptographically sign the envelope natively using SHA-256 and RSA Private Key
-    const signer = crypto.createSign('RSA-SHA256');
-    signer.update(signatureInput);
-    const signature = signer.sign(keyPair.privateKey, 'base64url');
-
-    const token = `${signatureInput}.${signature}`;
+    // Offload JWT creation and cryptographic signing to security utility
+    const token = security.generateJWT({ header, payload }, keyPair.privateKey, 'RS256');
 
     const session = { 
         user_id, 
@@ -212,24 +178,6 @@ async function read(organization_id, clientId, host) {
 }
 
 /**
- * Verifies the integrity of a cryptographic token envelope natively.
- */
-function verifySignature(token, publicKey) {
-    try {
-        const parts = token.split('.');
-        if (parts.length !== 3) return false;
-
-        const [header, payload, signature] = parts;
-        const verifier = crypto.createVerify('RSA-SHA256');
-        verifier.update(`${header}.${payload}`);
-
-        return verifier.verify(publicKey, signature, 'base64url');
-    } catch {
-        return false;
-    }
-}
-
-/**
  * Verifies and decodes an incoming session token, resolving the associated user identifier.
  * Incorporates local RSA public-key validation and falls back to self-contained payload data.
  */
@@ -240,9 +188,9 @@ async function decodeToken(tokenRaw, organization_id, clientId, host) {
     const parts = token.split('.');
     if (parts.length !== 3) return {};
 
-    const [headerB64, payloadB64, signatureB64] = parts;
-    const header = base64urlDecode(headerB64);
-    const payload = base64urlDecode(payloadB64);
+    const [headerB64, payloadB64] = parts;
+    const header = security.base64urlDecode(headerB64);
+    const payload = security.base64urlDecode(payloadB64);
 
     if (!header || !payload) return {};
 
@@ -254,11 +202,11 @@ async function decodeToken(tokenRaw, organization_id, clientId, host) {
         return {};
     }
 
-    // 2. Core Security Check: Identify active signing keys using Key ID (kid)
+    // 2. Core Security Check: Identify active signing keys using Key ID (kid) and verify via security engine
     const keyPair = keyPairs.get(header.kid);
     if (keyPair) {
-        const isValid = verifySignature(token, keyPair.publicKey);
-        if (!isValid) {
+        const verifiedPayload = security.verifyJWT(token, keyPair.publicKey, 'RS256');
+        if (!verifiedPayload) {
             console.warn(`[SECURITY WARNING] Blocked forged token attempt on clientId: ${clientId || payload.clientId}`);
             return {};
         }
