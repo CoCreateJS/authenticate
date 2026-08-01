@@ -51,13 +51,13 @@ function createKeyPair() {
         privateKey,
         publicKey,
         created,
-        expires: created + tokenExpiration * 60 * 1000,
+        // Retain keypairs slightly longer than token expiration to ensure verification window
+        expires: created + (tokenExpiration * 2) * 60 * 1000,
     };
 
     keyPairs.set(keyPair._id, keyPair);
     return keyPair;
 }
-
 
 /**
  * Deletes an expired or revoked RSA key pair from local tracking.
@@ -87,6 +87,20 @@ function base64urlDecode(str) {
     }
 }
 
+/**
+ * Strips 'Bearer ' prefixes, whitespace, or outer quotes from incoming tokens.
+ */
+function sanitizeToken(token) {
+    if (typeof token !== 'string') return '';
+    let cleaned = token.trim();
+    if (cleaned.startsWith('Bearer ')) {
+        cleaned = cleaned.slice(7).trim();
+    }
+    if ((cleaned.startsWith('"') && cleaned.endsWith('"')) || (cleaned.startsWith("'") && cleaned.endsWith("'"))) {
+        cleaned = cleaned.slice(1, -1).trim();
+    }
+    return cleaned;
+}
 
 /**
  * Creates and signs a new token utilizing the latest available RSA key pair.
@@ -96,11 +110,11 @@ function encodeToken(organization_id, user_id, clientId, host) {
     let keyPair = null;
     const currentTime = Date.now();
     
-    // Prune expired keypairs and locate/reuse a valid active one
+    // Prune expired keypairs and locate an active signing key
     for (const [key, value] of keyPairs) {
         if (currentTime > value.expires) {
             deleteKeyPair(value);
-        } else {
+        } else if (!keyPair) {
             keyPair = value;
         }
     }
@@ -122,6 +136,7 @@ function encodeToken(organization_id, user_id, clientId, host) {
     const payload = {
         user_id,
         clientId,
+        organization_id,
         iat,
         exp
     };
@@ -144,9 +159,11 @@ function encodeToken(organization_id, user_id, clientId, host) {
         expires: currentTime + tokenExpiration * 60 * 1000 
     };
     
-    sessions.set(clientId, session);
+    if (clientId) {
+        sessions.set(clientId, session);
+    }
 
-    if (crud) {
+    if (crud && clientId) {
         crud.send({
             method: 'object.update',
             host,
@@ -163,30 +180,36 @@ function encodeToken(organization_id, user_id, clientId, host) {
     return token;
 }
 
-
 /**
  * Reads, parses, and validates the configuration and active state of client sessions.
  */
 async function read(organization_id, clientId, host) {
-    if (!crud) return null;
+    if (!crud || !clientId) return null;
 
-    const client = await crud.send({
-        method: 'object.read',
-        host,
-        array: 'clients',
-        object: {
-            _id: clientId
-        },
-        organization_id,
-    });
+    try {
+        const client = await crud.send({
+            method: 'object.read',
+            host,
+            array: 'clients',
+            object: {
+                _id: clientId
+            },
+            organization_id,
+        });
 
-    if (client && client.object && client.object.length) {
-        sessions.set(clientId, client.object[0].session);
-        return client.object[0].session;
+        if (client && client.object) {
+            // Support both array response objects and direct document responses
+            const target = Array.isArray(client.object) ? client.object[0] : client.object;
+            if (target && target.session) {
+                sessions.set(clientId, target.session);
+                return target.session;
+            }
+        }
+    } catch (err) {
+        console.warn('[AUTH] Failed to read session from storage:', err);
     }
     return null;
 }
-
 
 /**
  * Verifies the integrity of a cryptographic token envelope natively.
@@ -208,9 +231,10 @@ function verifySignature(token, publicKey) {
 
 /**
  * Verifies and decodes an incoming session token, resolving the associated user identifier.
- * Incorporates local RSA public-key validation before hitting session layers.
+ * Incorporates local RSA public-key validation and falls back to self-contained payload data.
  */
-async function decodeToken(token, organization_id, clientId, host) {
+async function decodeToken(tokenRaw, organization_id, clientId, host) {
+    const token = sanitizeToken(tokenRaw);
     if (!token) return {};
     
     const parts = token.split('.');
@@ -222,41 +246,64 @@ async function decodeToken(token, organization_id, clientId, host) {
 
     if (!header || !payload) return {};
 
-    // 1. Core Security Check: Identify active signing keys using Key ID (kid)
+    const currentTime = Date.now();
+
+    // 1. Validate token expiration directly from JWT payload
+    if (payload.exp && (payload.exp * 1000) < currentTime) {
+        console.warn(`[AUTH] Expired token received for user: ${payload.user_id}`);
+        return {};
+    }
+
+    // 2. Core Security Check: Identify active signing keys using Key ID (kid)
     const keyPair = keyPairs.get(header.kid);
     if (keyPair) {
-        // Reject forged signatures instantly without proceeding to database/session checks
         const isValid = verifySignature(token, keyPair.publicKey);
         if (!isValid) {
-            console.warn(`[SECURITY WARNING] Blocked forged token attempt on clientId: ${clientId}`);
+            console.warn(`[SECURITY WARNING] Blocked forged token attempt on clientId: ${clientId || payload.clientId}`);
             return {};
         }
     }
 
-    const currentTime = Date.now();
-    let session = sessions.get(clientId);
+    // Determine target clientId from parameters or JWT payload
+    const activeClientId = clientId || payload.clientId;
+
+    // 3. Check hot session cache or storage
+    let session = activeClientId ? sessions.get(activeClientId) : null;
 
     if (!session || session.token !== token) {
-        session = await read(organization_id, clientId, host);
+        if (activeClientId) {
+            session = await read(organization_id, activeClientId, host);
+        }
     }
 
+    // Active session match found
     if (session && currentTime < session.expires && session.token === token) {
         return { user_id: session.user_id, expires: session.expires };
     }
 
-    sessions.delete(clientId);
-    
-    if (crud) {
-        crud.send({
-            method: 'object.update',
-            host,
-            array: 'clients',
-            object: {
-                _id: clientId,
-                session: null
-            },
-            organization_id,
-        });
+    // 4. JWT Payload Fallback: Return user_id directly from the decoded payload
+    if (payload.user_id) {
+        return { 
+            user_id: payload.user_id, 
+            expires: payload.exp ? (payload.exp * 1000) : (currentTime + tokenExpiration * 60 * 1000) 
+        };
+    }
+
+    if (activeClientId) {
+        sessions.delete(activeClientId);
+        
+        if (crud) {
+            crud.send({
+                method: 'object.update',
+                host,
+                array: 'clients',
+                object: {
+                    _id: activeClientId,
+                    session: null
+                },
+                organization_id,
+            });
+        }
     }
 
     return {};
