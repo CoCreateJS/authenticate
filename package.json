@@ -28,7 +28,7 @@
   "license": "AGPL-3.0",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/CoCreate-app/CoCreate-authenticate.git"
+    "url": "git+https://gitlab.com/cocreatejs/CoCreate-authenticate.git"
   },
   "author": "CoCreate LLC",
   "bugs": {
