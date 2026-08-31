@@ -23,7 +23,7 @@
 import crud from '@cocreate/crud-server';
 import { security } from '@cocreate/utils';
 
-const tokenExpiration = 60; // Token expiration in minutes
+const tokenExpiration = 30 * 24 * 60; // 30-day token expiration in minutes
 const keyPairs = new Map();  // Active public/private cryptographic key pairs
 const sessions = new Map();  // In-memory hot session storage cache
 
