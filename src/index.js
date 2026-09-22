@@ -193,6 +193,7 @@ async function decodeToken(tokenRaw, organization_id, clientId, host) {
     const payload = security.base64urlDecode(payloadB64);
 
     if (!header || !payload) return {};
+    if (organization_id && payload.organization_id !== organization_id) return {};
 
     const currentTime = Date.now();
 
@@ -204,8 +205,9 @@ async function decodeToken(tokenRaw, organization_id, clientId, host) {
 
     // 2. Core Security Check: Identify active signing keys using Key ID (kid) and verify via security engine
     const keyPair = keyPairs.get(header.kid);
+    let verifiedPayload;
     if (keyPair) {
-        const verifiedPayload = security.verifyJWT(token, keyPair.publicKey, 'RS256');
+        verifiedPayload = security.verifyJWT(token, keyPair.publicKey, 'RS256');
         if (!verifiedPayload) {
             console.warn(`[SECURITY WARNING] Blocked forged token attempt on clientId: ${clientId || payload.clientId}`);
             return {};
@@ -230,7 +232,7 @@ async function decodeToken(tokenRaw, organization_id, clientId, host) {
     }
 
     // 4. JWT Payload Fallback: Return user_id directly from the decoded payload
-    if (payload.user_id) {
+    if (verifiedPayload && payload.user_id) {
         return { 
             user_id: payload.user_id, 
             expires: payload.exp ? (payload.exp * 1000) : (currentTime + tokenExpiration * 60 * 1000) 
