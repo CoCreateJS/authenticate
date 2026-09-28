@@ -20,12 +20,17 @@
 // you must obtain a commercial license from CoCreate LLC.
 // For details, visit <https://cocreate.app/licenses/> or contact us at sales@cocreate.app.
 
-import crud from '@cocreate/crud-server';
 import { security } from '@cocreate/utils';
 
 const tokenExpiration = 30 * 24 * 60; // 30-day token expiration in minutes
 const keyPairs = new Map();  // Active public/private cryptographic key pairs
 const sessions = new Map();  // In-memory hot session storage cache
+let server = null;
+
+function init(serverInstance) {
+    server = serverInstance;
+    return authenticate;
+}
 
 /**
  * Generates a new RSA key pair dynamically and tracks its expiration lifecycle.
@@ -83,7 +88,7 @@ function sanitizeToken(token) {
 function encodeToken(organization_id, user_id, clientId, host) {
     let keyPair = null;
     const currentTime = Date.now();
-    
+    console.log("auth:", organization_id)
     // Prune expired keypairs and locate an active signing key
     for (const [key, value] of keyPairs) {
         if (currentTime > value.expires) {
@@ -118,19 +123,19 @@ function encodeToken(organization_id, user_id, clientId, host) {
     // Offload JWT creation and cryptographic signing to security utility
     const token = security.generateJWT({ header, payload }, keyPair.privateKey, 'RS256');
 
-    const session = { 
-        user_id, 
-        clientId, 
-        token, 
-        expires: currentTime + tokenExpiration * 60 * 1000 
+    const session = {
+        user_id,
+        clientId,
+        token,
+        expires: currentTime + tokenExpiration * 60 * 1000
     };
-    
+
     if (clientId) {
         sessions.set(clientId, session);
     }
 
-    if (crud && clientId) {
-        crud.send({
+    if (server?.crud && clientId) {
+        server.crud.send({
             method: 'object.update',
             host,
             array: 'clients',
@@ -150,10 +155,10 @@ function encodeToken(organization_id, user_id, clientId, host) {
  * Reads, parses, and validates the configuration and active state of client sessions.
  */
 async function read(organization_id, clientId, host) {
-    if (!crud || !clientId) return null;
+    if (!server?.crud || !clientId) return null;
 
     try {
-        const client = await crud.send({
+        const client = await server.crud.send({
             method: 'object.read',
             host,
             array: 'clients',
@@ -184,7 +189,7 @@ async function read(organization_id, clientId, host) {
 async function decodeToken(tokenRaw, organization_id, clientId, host) {
     const token = sanitizeToken(tokenRaw);
     if (!token) return {};
-    
+
     const parts = token.split('.');
     if (parts.length !== 3) return {};
 
@@ -193,7 +198,14 @@ async function decodeToken(tokenRaw, organization_id, clientId, host) {
     const payload = security.base64urlDecode(payloadB64);
 
     if (!header || !payload) return {};
-    if (organization_id && payload.organization_id !== organization_id) return {};
+    const isPlatformOrganization = organization_id === server?.organization_id;
+    if (
+        organization_id &&
+        payload.organization_id !== organization_id &&
+        !isPlatformOrganization
+    ) {
+        return {};
+    }
 
     const currentTime = Date.now();
 
@@ -222,7 +234,7 @@ async function decodeToken(tokenRaw, organization_id, clientId, host) {
 
     if (!session || session.token !== token) {
         if (activeClientId) {
-            session = await read(organization_id, activeClientId, host);
+            session = await read(payload?.organization_id || organization_id, activeClientId, host);
         }
     }
 
@@ -233,17 +245,17 @@ async function decodeToken(tokenRaw, organization_id, clientId, host) {
 
     // 4. JWT Payload Fallback: Return user_id directly from the decoded payload
     if (verifiedPayload && payload.user_id) {
-        return { 
-            user_id: payload.user_id, 
-            expires: payload.exp ? (payload.exp * 1000) : (currentTime + tokenExpiration * 60 * 1000) 
+        return {
+            user_id: payload.user_id,
+            expires: payload.exp ? (payload.exp * 1000) : (currentTime + tokenExpiration * 60 * 1000)
         };
     }
 
     if (activeClientId) {
         sessions.delete(activeClientId);
-        
-        if (crud) {
-            crud.send({
+
+        if (server?.crud) {
+            server.crud.send({
                 method: 'object.update',
                 host,
                 array: 'clients',
@@ -251,7 +263,7 @@ async function decodeToken(tokenRaw, organization_id, clientId, host) {
                     _id: activeClientId,
                     session: null
                 },
-                organization_id,
+                organization_id: payload?.organization_id || organization_id,
             });
         }
     }
@@ -260,10 +272,13 @@ async function decodeToken(tokenRaw, organization_id, clientId, host) {
 }
 
 // Export the API directly as a flat default object manifest
-export default {
+const authenticate = {
+    init,
     createKeyPair,
     deleteKeyPair,
     encodeToken,
     decodeToken,
     read
 };
+
+export default authenticate;
