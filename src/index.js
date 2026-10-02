@@ -88,7 +88,7 @@ function sanitizeToken(token) {
 function encodeToken(organization_id, user_id, clientId, host) {
     let keyPair = null;
     const currentTime = Date.now();
-    console.log("auth:", organization_id)
+
     // Prune expired keypairs and locate an active signing key
     for (const [key, value] of keyPairs) {
         if (currentTime > value.expires) {
