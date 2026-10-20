@@ -1,6 +1,6 @@
 {
   "name": "@cocreate/authenticate",
-  "version": "1.17.0",
+  "version": "1.18.0",
   "description": "A high-performance, zero-dependency ESM session management and authentication engine using native RS256 asymmetric cryptography, ephemeral 2048-bit RSA keypair rotation, and reactive database state synchronization.",
   "keywords": [
     "cocreate",
