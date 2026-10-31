@@ -52,11 +52,11 @@
   },
   "author": "CoCreate LLC",
   "bugs": {
-    "url": "https://github.com/CoCreate-app/CoCreate-authenticate/issues"
+    "url": "https://github.com/CoCreateJS/CoCreate-authenticate/issues"
   },
   "type": "module",
   "main": "./src/index.js",
-  "homepage": "https://cocreate.app/docs/authenticate",
+  "homepage": "https://CoCreateJS.com/docs/authenticate",
   "dependencies": {
     "@cocreate/crud-server": "^1.42.0",
     "@cocreate/utils": "^1.54.0"
