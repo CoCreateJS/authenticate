@@ -27,6 +27,11 @@ const keyPairs = new Map();  // Active public/private cryptographic key pairs
 const sessions = new Map();  // In-memory hot session storage cache
 let server = null;
 
+/**
+ *
+ * @public
+ * @environment server
+ */
 function init(serverInstance) {
     server = serverInstance;
     return authenticate;
@@ -35,6 +40,8 @@ function init(serverInstance) {
 /**
  * Generates a new RSA key pair dynamically and tracks its expiration lifecycle.
  * @returns {Object} Newly created key pair configuration
+ * @public
+ * @environment server
  */
 function createKeyPair() {
     // Utilize security.generateKeyPair utility with RSA configuration
@@ -59,6 +66,8 @@ function createKeyPair() {
 /**
  * Deletes an expired or revoked RSA key pair from local tracking.
  * @param {Object} keyPair - The target key pair to remove
+ * @public
+ * @environment server
  */
 function deleteKeyPair(keyPair) {
     if (keyPair && keyPair._id) {
@@ -68,6 +77,8 @@ function deleteKeyPair(keyPair) {
 
 /**
  * Strips 'Bearer ' prefixes, whitespace, or outer quotes from incoming tokens.
+ * @private
+ * @environment server
  */
 function sanitizeToken(token) {
     if (typeof token !== 'string') return '';
@@ -84,6 +95,8 @@ function sanitizeToken(token) {
 /**
  * Creates and signs a new token utilizing the latest available RSA key pair.
  * Generates an RS256 JWT using security.generateJWT.
+ * @public
+ * @environment server
  */
 function encodeToken(organization_id, user_id, clientId, host) {
     let keyPair = null;
@@ -153,6 +166,8 @@ function encodeToken(organization_id, user_id, clientId, host) {
 
 /**
  * Reads, parses, and validates the configuration and active state of client sessions.
+ * @public
+ * @environment server
  */
 async function read(organization_id, clientId, host) {
     if (!server?.crud || !clientId) return null;
@@ -185,6 +200,8 @@ async function read(organization_id, clientId, host) {
 /**
  * Verifies and decodes an incoming session token, resolving the associated user identifier.
  * Incorporates local RSA public-key validation and falls back to self-contained payload data.
+ * @public
+ * @environment server
  */
 async function decodeToken(tokenRaw, organization_id, clientId, host) {
     const token = sanitizeToken(tokenRaw);
@@ -282,3 +299,10 @@ const authenticate = {
 };
 
 export default authenticate;
+
+/**
+ * A high-performance, zero-dependency ESM session management and authentication engine using native RS256 asymmetric cryptography, ephemeral 2048-bit RSA keypair rotation, and reactive database state synchronization.
+ *
+ * @module authenticate
+ * @environment server
+ */
