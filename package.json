@@ -28,11 +28,11 @@
   "license": "AGPL-3.0",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/cocreatejs/CoCreate-authenticate.git"
+    "url": "git+https://github.com/CoCreateJS/authenticate.git"
   },
   "author": "CoCreate LLC",
   "bugs": {
-    "url": "https://github.com/CoCreateJS/CoCreate-authenticate/issues"
+    "url": "https://github.com/CoCreateJS/authenticate/issues"
   },
   "type": "module",
   "main": "./src/index.js",

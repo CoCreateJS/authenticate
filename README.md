@@ -121,7 +121,7 @@ if (!session.user_id) {
 
 ## How to Contribute
 
-We encourage contribution to our libraries (you might even score some nifty swag), please see our [CONTRIBUTING.md](https://github.com/CoCreateJS/CoCreate-authentication/blob/master/CONTRIBUTING.md) guide for details. If you encounter any bugs or wish to make feature requests, please submit an issue on our [GitHub Issues](https://github.com/CoCreateJS/CoCreate-authentication/issues) tracker. We want this library to be community-driven, and CoCreate led. We need your help to realize this goal.
+We encourage contribution to our libraries (you might even score some nifty swag), please see our [CONTRIBUTING.md](https://github.com/CoCreateJS/authentication/blob/master/CONTRIBUTING.md) guide for details. If you encounter any bugs or wish to make feature requests, please submit an issue on our [GitHub Issues](https://github.com/CoCreateJS/authentication/issues) tracker. We want this library to be community-driven, and CoCreate led. We need your help to realize this goal.
 
 For broader system configurations and API guides, please visit our [CoCreate Authentication Documentation](https://cocreatejs.com/docs/authentication).
 
