@@ -1,3 +1,28 @@
+# [2.0.0](https://github.com/CoCreateJS/authenticate/compare/v1.12.2...v2.0.0) (2026-11-02)
+
+
+### Bug Fixes
+
+* add Deno specific entries to .gitignore ([d40412a](https://github.com/CoCreateJS/authenticate/commit/d40412aed6445f8d5ffeba29b272cb1192663156))
+* add homepage and update dependencies in package.json ([70c982c](https://github.com/CoCreateJS/authenticate/commit/70c982cc065839895628b15ae57c734251d97e1b))
+* bump [@cocreate](https://github.com/cocreate) dependencies ([efd4c00](https://github.com/CoCreateJS/authenticate/commit/efd4c00f90c04c90fc213e10fe0f6ea30c399136))
+* bump versions ([e19cd01](https://github.com/CoCreateJS/authenticate/commit/e19cd013b3a9ebb87995a0d340a8d50419096bce))
+* remove trailing slash from node_modules entry in .gitignore ([15e5aff](https://github.com/CoCreateJS/authenticate/commit/15e5afffc72017d5d53bf5679b2c163261ce28bb))
+* update git url ([a973704](https://github.com/CoCreateJS/authenticate/commit/a9737043c746e15169cd38f07953262fbaef9a34))
+* update GitHub Actions to use latest versions and sync package.json description ([5311239](https://github.com/CoCreateJS/authenticate/commit/53112395cb326c6f86f9f3a2a9f8fb6f74c91137))
+
+
+### Features
+
+* add @cocreate/utils dependency and refactor token handling with security utilities ([aa56a06](https://github.com/CoCreateJS/authenticate/commit/aa56a06e379b62eacca7d54c47993750415038c6))
+* align CoCreate repository and package naming ([dad793d](https://github.com/CoCreateJS/authenticate/commit/dad793d111dec82c948966529956f28a15bd81ad))
+* extend token expiration and add token sanitization function ([ca29e16](https://github.com/CoCreateJS/authenticate/commit/ca29e16f25256f87a4a19fdd596d804484bd3f77))
+
+
+### BREAKING CHANGES
+
+* consumers must use the renamed CoCreate package and repository identities; the previous prefixed names are no longer supported.
+
 ## [1.12.2](https://github.com/CoCreateJS/CoCreate-authenticate/compare/v1.12.1...v1.12.2) (2026-07-19)
 
 
