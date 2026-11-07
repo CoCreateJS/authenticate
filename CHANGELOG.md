@@ -1,3 +1,11 @@
+## [2.0.2](https://github.com/CoCreateJS/authenticate/compare/v2.0.1...v2.0.2) (2026-11-07)
+
+
+### Bug Fixes
+
+* bump CoCreate dependency versions ([13eed9a](https://github.com/CoCreateJS/authenticate/commit/13eed9a39aa57ed5661728cc279014201ef73041))
+* consolidate CRUD client and server packages ([b2dda49](https://github.com/CoCreateJS/authenticate/commit/b2dda49dcd9748b6fc2609dfd414433e01408d35))
+
 ## [2.0.1](https://github.com/CoCreateJS/authenticate/compare/v2.0.0...v2.0.1) (2026-11-05)
 
 
